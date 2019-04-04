@@ -8,7 +8,10 @@
 #     https://doc.scrapy.org/en/latest/topics/settings.html
 #     https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://doc.scrapy.org/en/latest/topics/spider-middleware.html
-
+import os
+import sys
+import pkgutil
+import pkg_resources
 BOT_NAME = 'doubanspider'
 
 SPIDER_MODULES = ['doubanspider.spiders']
@@ -108,7 +111,10 @@ RETRY_HTTP_CODES = [500, 503, 504, 400, 403, 404, 408]
 # http://username:password@host2:port
 # http://host3:port
 # ...
-PROXY_LIST = 'doubanspider/HTTPProxyList.txt'
+resource_package = __name__
+resource_path = '/'.join(('resourses', 'HTTPProxyList.txt'))
+PROXY_LIST = pkg_resources.resource_string(resource_package, resource_path)
+
 
 # Proxy mode
 # 0 = Every requests have different proxy

@@ -1,0 +1,3 @@
+numpy
+fake_useragent
+scrapy_proxies

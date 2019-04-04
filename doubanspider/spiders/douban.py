@@ -2,58 +2,201 @@
 import scrapy
 import re
 from scrapy import Selector
+import numpy as np
+import time
 
 class DoubanSpider(scrapy.Spider):
     name = 'douban'
 
-    # allowed_domains = ['book.douban.com']
-    allowed_domains = []
+    allowed_domains = ['book.douban.com']
+    # allowed_domains = []
     start_urls = []
 
-    def parse(self, response):
+    lst = []
+
+    def parse_detail(self, response):
 
         info = re.sub(">\s*<","><",response.css('div.subjectwrap.clearfix').extract_first())
-#         print(info)
+        info = re.sub("[\s]{2,}", "", info)
         infose = Selector(text=info)
-        # print(infose.css("#info::text").extract())
-        # print(infose.css("#info>span.pl").extract())
         attr = infose.css("#info>span.pl::text").extract()
         value = infose.css("#info::text").extract()
-        # print(attr)
-        # print(value)
-        dic=[]
+        sp=[]
+        item = Book()
+        url_split = response.request.url.split('/')
+        item['subjectId'] = url_split[-2]
+        try:
+            attr.remove('作者:')
+            sp.append('作者')
+        except ValueError:
+            pass
+
         try:
             attr.remove('出品方:')
+            sp.append('出品方')
+        except ValueError:
+            pass
+
+        try:
+            attr.remove('译者:')
+            sp.append('译者')
         except ValueError:
             pass
 
         try:
             attr.remove('丛书:')
+            sp.append('丛书')
         except ValueError:
             pass
+
+        try:
+            value.remove('/')
+        except ValueError:
+            pass
+        print(value)
         for i in range(len(attr)):
-            dic.append((attr[i],value[i]))
-        dic.append(('标题:', infose.css("a.nbg::attr(title)").extract_first()))
-        dic.append(('图片:', infose.css("a.nbg::attr(href)").extract_first()))
+            if attr[i] == '出版社:':
+                item['publisher'] = value[i].strip()
+            elif attr[i] == '副标题:':
+                item['subtitle'] = value[i].strip()
+            elif attr[i] == '出版年:':
+                item['pubdate'] = value[i].strip()
+            elif attr[i] == '页数:':
+                item['pages'] = value[i].strip()
+            elif attr[i] == '定价:':
+                item['price'] = value[i].strip()
+            elif attr[i] == '装帧:':
+                item['binding'] = value[i].strip()
+            elif attr[i] == 'ISBN:':
+                item['ISBN'] = value[i].strip()
+            elif attr[i] == '原作名:':
+                item['originalTitle'] = value[i].strip()
+        item['image'] = infose.css("a.nbg::attr(href)").extract_first().strip()
+        item['title'] = infose.css("a.nbg::attr(title)").extract_first().strip()
+
+        sp_val = infose.css("span ~ a::text").extract()
+
+        try:
+            sp_val.remove('人评价')
+        except ValueError:
+            pass
+
+        for i in range(len(sp)):
+            if sp[i] == '作者':
+                item['author'] = sp_val[i].strip()
+            elif sp[i] == '出品方':
+                item['stackholder'] = sp_val[i].strip()
+            elif sp[i] == '译者':
+                item['translator'] = sp_val[i].strip()
+            elif sp[i] == '丛书':
+                item['series'] = sp_val[i].strip()
+
+        sp_a = infose.css("#info>span:not(.pl)").extract()
+        for i in range(len(sp_a)):
+            sec = Selector(text=sp_a[i])
+            cur = sec.css("span.pl::text").extract_first().strip()
+            if cur == '作者':
+                item['author'] = ', '.join(sec.css("a::text").extract())
+            elif cur == '出品方':
+                item['stackholder'] = ', '.join(sec.css("a::text").extract())
+            elif cur == '译者':
+                item['translator'] = ', '.join(sec.css("a::text").extract())
+            elif cur == '丛书':
+                item['series'] = ', '.join(sec.css("a::text").extract())
+
         stars = infose.css("span.rating_per::text").extract()
         if len(stars) != 0:
             for i in range(len(stars)):
-                dic.append((5-i, stars[i]))
+                if i == 0:
+                    item['fiveStar'] = stars[i]
+                elif i == 1:
+                    item['fourStar'] = stars[i]
+                elif i == 2:
+                    item['threeStar'] = stars[i]
+                elif i == 3:
+                    item['twoStar'] = stars[i]
+                elif i == 4:
+                    item['oneStar'] = stars[i]
 
-        dic.append(('总分:', infose.css("strong.ll.rating_num::text").extract_first()))
-        dic.append(('总人数:', infose.css("#interest_sectl>div>div>div>div.rating_sum>span>a>span::text").extract_first()))
+        grade = infose.css("strong.ll.rating_num::text").extract_first()
+        if grade is not None :
+            item['grade'] = grade.strip()
+        gradedNum = infose.css("#interest_sectl>div>div>div>div.rating_sum>span>a>span::text").extract_first()
+        if gradedNum is not None:
+            item['gradedNum'] = gradedNum.strip()
 
-        summary = re.sub(">\s*<", "><", response.css('div.intro').extract_first())
-        #         print(info)
-        summaryse = Selector(text=summary)
-        dic.append(('简介:', summaryse.css("p::text").extract_first()))
-        for i in dic:
-            print(i)
+        if response.css('div.intro').extract_first() is not None:
+            summary = re.sub(">\s*<", "><", response.css('div.intro').extract_first())
+            summaryse = Selector(text=summary)
+            item['summary'] = ''.join(summaryse.css("p::text").extract()).strip()
 
-        # content > div > div.article > div.indent > div.subjectwrap.clearfix
-        # print(response.headers)
+        yield item
+
+
+    def parse_tag(self, response):
+        pass
+
+    def parse_list(self, response):
+        lst = response.css("li.subject-item").extract()
+
+        for i in lst:
+            selector = Selector(text=i)
+            url = selector.css("div.info>h2>a::attr(href)").extract_first()
+            sub = url.split('/')[-2]
+            lst.append(sub)
+            time.sleep(np.random.rand() * 3)
+            yield scrapy.Request(url=url, callback=self.parse_detail, dont_filter=True)
+
+        next = response.css("span.next>a::attr(href)").extract_first()
+        if next is not None:
+            yield scrapy.Request(url=response.urljoin(next), callback=self.parse_list)
+        else:
+            yield {
+                'list': lst
+            }
 
     def start_requests(self):
         url = 'https://book.douban.com/subject/30372880/'
         url2 = 'https://book.douban.com/subject/30487959/'
-        yield scrapy.Request(url=url2, callback=self.parse, dont_filter=True)
+        url3 = 'https://book.douban.com/subject/14939650/'
+        url4 = 'https://book.douban.com/subject/25862578/'
+        url5 = 'https://book.douban.com/subject/1084336/'
+
+        url_list = 'https://book.douban.com/tag/%E5%B0%8F%E8%AF%B4?start=0&type=T'
+
+        tags = ['艺术史']
+
+        for i in tags:
+            yield scrapy.Request(url='https://book.douban.com/tag/'+i, callback=self.parse_list)
+
+
+        # yield scrapy.Request(url=url_list, callback=self.parse_list)
+        # yield scrapy.Request(url=url5, callback=self.parse_detail, dont_filter=True)
+
+
+class Book(scrapy.Item):
+
+    title = scrapy.Field()
+    image = scrapy.Field()
+    author = scrapy.Field()
+    publisher = scrapy.Field()
+    stackholder = scrapy.Field()
+    subtitle = scrapy.Field()
+    originalTitle = scrapy.Field()
+    translator = scrapy.Field()
+    pubdate = scrapy.Field()
+    pages = scrapy.Field()
+    price = scrapy.Field()
+    binding = scrapy.Field()
+    series = scrapy.Field()
+    ISBN = scrapy.Field()
+    summary = scrapy.Field()
+    fiveStar = scrapy.Field()
+    fourStar = scrapy.Field()
+    threeStar = scrapy.Field()
+    twoStar = scrapy.Field()
+    oneStar = scrapy.Field()
+    grade = scrapy.Field()
+    gradedNum = scrapy.Field()
+    subjectId = scrapy.Field()
+

@@ -1,0 +1,4 @@
+project: 382823
+requirements_file: doubanspider/requirements.txt
+stacks:
+  default: scrapy:1.6-py3
