@@ -8,7 +8,8 @@
 from scrapy import signals
 from fake_useragent import UserAgent
 from scrapy.downloadermiddlewares.useragent import UserAgentMiddleware
-
+import settings
+import random
 
 class DoubanspiderSpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
@@ -114,6 +115,17 @@ class RandomUserAgentMiddleware(UserAgentMiddleware):
 
     def process_request(self, request, spider):
         ua = UserAgent(verify_ssl=False)
-
+        ua.update()
         agent = ua.random
+        request.headers['User-Agent'] = agent
+
+class RandomUserAgentMiddleware2(UserAgentMiddleware):
+    def __init__(self, user_agent):
+        self.user_agent = user_agent
+
+    @classmethod
+
+
+    def process_request(self, request, spider):
+        agent = random.choice(settings.USER_AGENT_LIST)
         request.headers['User-Agent'] = agent

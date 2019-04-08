@@ -4,6 +4,9 @@ import re
 from scrapy import Selector
 import numpy as np
 import time
+import settings
+
+
 
 class DoubanSpider(scrapy.Spider):
     name = 'douban'
@@ -12,12 +15,17 @@ class DoubanSpider(scrapy.Spider):
     # allowed_domains = []
     start_urls = []
 
-    lst = []
+    cur_lst = []
 
     def parse_detail(self, response):
 
+        if response.css("#db-nav-book").extract_first() is None or response.css('div.subjectwrap.clearfix').extract_first() is None:
+            return
+
         info = re.sub(">\s*<","><",response.css('div.subjectwrap.clearfix').extract_first())
         info = re.sub("[\s]{2,}", "", info)
+        info = re.sub(">\s*/\s<*","><", info)
+        info = re.sub(">\s*:\s<*", "><", info)
         infose = Selector(text=info)
         attr = infose.css("#info>span.pl::text").extract()
         value = infose.css("#info::text").extract()
@@ -27,25 +35,25 @@ class DoubanSpider(scrapy.Spider):
         item['subjectId'] = url_split[-2]
         try:
             attr.remove('作者:')
-            sp.append('作者')
+            # sp.append('作者')
         except ValueError:
             pass
 
         try:
             attr.remove('出品方:')
-            sp.append('出品方')
+            # sp.append('出品方')
         except ValueError:
             pass
 
         try:
             attr.remove('译者:')
-            sp.append('译者')
+            # sp.append('译者')
         except ValueError:
             pass
 
         try:
             attr.remove('丛书:')
-            sp.append('丛书')
+            # sp.append('丛书')
         except ValueError:
             pass
 
@@ -54,6 +62,7 @@ class DoubanSpider(scrapy.Spider):
         except ValueError:
             pass
         print(value)
+
         for i in range(len(attr)):
             if attr[i] == '出版社:':
                 item['publisher'] = value[i].strip()
@@ -74,21 +83,23 @@ class DoubanSpider(scrapy.Spider):
         item['image'] = infose.css("a.nbg::attr(href)").extract_first().strip()
         item['title'] = infose.css("a.nbg::attr(title)").extract_first().strip()
 
-        sp_val = infose.css("span ~ a::text").extract()
-
+        sp_val = infose.css("span + a::text").extract()
+        sp = infose.xpath("//a/preceding-sibling::span[1]/text()").extract()
+        # print(sp)
+        # print(sp_val)
         try:
             sp_val.remove('人评价')
         except ValueError:
             pass
 
-        for i in range(len(sp)):
-            if sp[i] == '作者':
+        for i in range(len(sp_val)):
+            if sp[i] == '作者:':
                 item['author'] = sp_val[i].strip()
-            elif sp[i] == '出品方':
+            elif sp[i] == '出品方:':
                 item['stackholder'] = sp_val[i].strip()
-            elif sp[i] == '译者':
+            elif sp[i] == '译者:':
                 item['translator'] = sp_val[i].strip()
-            elif sp[i] == '丛书':
+            elif sp[i] == '丛书:':
                 item['series'] = sp_val[i].strip()
 
         sp_a = infose.css("#info>span:not(.pl)").extract()
@@ -138,21 +149,26 @@ class DoubanSpider(scrapy.Spider):
 
     def parse_list(self, response):
         lst = response.css("li.subject-item").extract()
-
+        settings.TAG_FLAG = 0
         for i in lst:
             selector = Selector(text=i)
             url = selector.css("div.info>h2>a::attr(href)").extract_first()
+            # print(url)
+            if url is None:
+                continue
             sub = url.split('/')[-2]
-            lst.append(sub)
-            time.sleep(np.random.rand() * 3)
+            self.cur_lst.append(sub)
+            time.sleep(np.random.rand()*2)
             yield scrapy.Request(url=url, callback=self.parse_detail, dont_filter=True)
 
         next = response.css("span.next>a::attr(href)").extract_first()
         if next is not None:
             yield scrapy.Request(url=response.urljoin(next), callback=self.parse_list)
-        else:
+        elif next is None or len(lst)==0:
+            # todo
+            settings.TAG_FLAG = 1
             yield {
-                'list': lst
+                settings.CURRENT_TAG: self.cur_lst
             }
 
     def start_requests(self):
@@ -161,21 +177,25 @@ class DoubanSpider(scrapy.Spider):
         url3 = 'https://book.douban.com/subject/14939650/'
         url4 = 'https://book.douban.com/subject/25862578/'
         url5 = 'https://book.douban.com/subject/1084336/'
-
+        url6 = 'https://book.douban.com/subject/30325327/'
+        url7 = 'https://book.douban.com/subject/1000009/'
         url_list = 'https://book.douban.com/tag/%E5%B0%8F%E8%AF%B4?start=0&type=T'
 
-        tags = ['艺术史']
 
-        for i in tags:
-            yield scrapy.Request(url='https://book.douban.com/tag/'+i, callback=self.parse_list)
+        # for i in settings.TAGS:
+        #     settings.CURRENT_TAG = i
+        #     yield scrapy.Request(url='https://book.douban.com/tag/'+i, callback=self.parse_list)
 
 
         # yield scrapy.Request(url=url_list, callback=self.parse_list)
-        # yield scrapy.Request(url=url5, callback=self.parse_detail, dont_filter=True)
+        # yield scrapy.Request(url=url7, callback=self.parse_detail, dont_filter=True)
+        for i in range(1003061,1050001):
+            yield scrapy.Request(url='https://book.douban.com/subject/'+str(i)+'/', callback=self.parse_detail)
+            time.sleep(np.random.rand() * 5)
+
 
 
 class Book(scrapy.Item):
-
     title = scrapy.Field()
     image = scrapy.Field()
     author = scrapy.Field()
@@ -199,4 +219,3 @@ class Book(scrapy.Item):
     grade = scrapy.Field()
     gradedNum = scrapy.Field()
     subjectId = scrapy.Field()
-
