@@ -219,3 +219,45 @@ class Book(scrapy.Item):
     grade = scrapy.Field()
     gradedNum = scrapy.Field()
     subjectId = scrapy.Field()
+
+
+class UASpider(scrapy.Spider):
+    name = 'uaspider'
+
+    allowed_domains = ['developers.whatismybrowser.com']
+    # allowed_domains = []
+    start_urls = []
+
+
+
+
+    def parse(self, response):
+        if response.css("div.content-base>section>div").extract_first() is None:
+            return
+        div = re.sub(">\s*<","><",response.css('div.content-base>section>div').extract_first())
+        div = re.sub("[\s]{2,}", "", div)
+        div = re.sub(">\s*/\s<*","><", div)
+        div = re.sub(">\s*:\s<*", "><", div)
+
+
+        rows = Selector(text=div).css('table>tbody>tr').extract()
+
+        for row in rows:
+            s = Selector(text=row)
+            content = s.css('td::text').extract()
+            if content[2] == "Computer":
+                ua = s.css('td.useragent>a::text').extract_first()
+                yield {'useragent':ua}
+        page = Selector(text=div).css('#pagination>a').extract()
+        url = Selector(text=page[-2]).css('::attr(href)').extract_first()
+        if Selector(text=div).css('#pagination>span.current::text').extract_first() == '10':
+            return
+        yield scrapy.Request(url=response.urljoin(url), callback=self.parse)
+
+
+
+
+    def start_requests(self):
+        url = "https://developers.whatismybrowser.com/useragents/explore/software_name/outlook/"
+        yield scrapy.Request(url=url, callback=self.parse)
+
