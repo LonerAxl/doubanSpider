@@ -13,12 +13,6 @@ import sys
 import pkgutil
 import pkg_resources
 
-global CURRENT_TAG
-global TAG_FLAG
-global TAGS
-TAGS = ['艺术史']
-CURRENT_TAG = TAGS[0]
-TAG_FLAG = 0
 
 # FEED_EXPORT_ENCODING = 'utf-8'
 
@@ -27,6 +21,10 @@ BOT_NAME = 'doubanspider'
 SPIDER_MODULES = ['doubanspider.spiders']
 NEWSPIDER_MODULE = 'doubanspider.spiders'
 
+global START_NUM
+global END_NUM
+START_NUM = 1012001
+END_NUM = 1100000
 global USER_AGENT_LIST_L
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 USER_AGENT_LIST_L = ['Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)',
@@ -123,7 +121,7 @@ USER_AGENT_LIST_L = ['Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .N
 ROBOTSTXT_OBEY = True
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-#CONCURRENT_REQUESTS = 32
+CONCURRENT_REQUESTS = 32
 
 # Configure a delay for requests for the same website (default: 0)
 # See https://doc.scrapy.org/en/latest/topics/settings.html#download-delay
@@ -134,16 +132,22 @@ ROBOTSTXT_OBEY = True
 #CONCURRENT_REQUESTS_PER_IP = 16
 
 # Disable cookies (enabled by default)
-#COOKIES_ENABLED = False
+COOKIES_ENABLED = False
 
 # Disable Telnet Console (enabled by default)
 #TELNETCONSOLE_ENABLED = False
 
 # Override the default request headers:
-#DEFAULT_REQUEST_HEADERS = {
-#   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-#   'Accept-Language': 'en',
-#}
+DEFAULT_REQUEST_HEADERS = {
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Accept-Language':'zh-CN,zh;q=0.9',
+    'Cache-Control': 'max-age=0',
+    'Connection': 'keep-alive',
+    'Host': 'book.douban.com',
+    'Referer': 'www.baidu.com',
+    'Upgrade-Insecure-Requests':' 1',
+}
 
 # Enable or disable spider middlewares
 # See https://doc.scrapy.org/en/latest/topics/spider-middleware.html
@@ -155,12 +159,12 @@ ROBOTSTXT_OBEY = True
 # See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
     'scrapy.downloadermiddlewares.retry.RetryMiddleware': 90,
-    'scrapy_proxies.RandomProxy': 100,
+    # 'scrapy_proxies.RandomProxy': 100,
+    'doubanspider.middlewares.RandomProxy2': 100,
     'scrapy.downloadermiddlewares.httpproxy.HttpProxyMiddleware': 110,
     'scrapy.downloadermiddlewares.useragent.UserAgentMiddleware': None,
     'doubanspider.middlewares.RandomUserAgentMiddleware3': 400,
     'doubanspider.middlewares.DoubanspiderDownloaderMiddleware': 543,
-
 
 }
 
@@ -201,10 +205,11 @@ ITEM_PIPELINES = {
 RANDOM_UA_PER_PROXY = True
 #
 # Retry many times since proxies often fail
-RETRY_TIMES = 5
+RETRY_TIMES = 15
 # Retry on most error codes since proxies fail for different reasons
-RETRY_HTTP_CODES = [500, 503, 504, 400, 403, 404, 408]
+RETRY_HTTP_CODES = [500, 503, 504, 400, 403, 404, 408, 301, 302]
 
+REDIRECT_ENABLED = False
 # Proxy list containing entries like
 # http://host1:port
 # http://username:password@host2:port

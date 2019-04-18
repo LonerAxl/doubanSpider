@@ -140,58 +140,14 @@ class DoubanSpider(scrapy.Spider):
             summary = re.sub(">\s*<", "><", response.css('div.intro').extract_first())
             summaryse = Selector(text=summary)
             item['summary'] = ''.join(summaryse.css("p::text").extract()).strip()
-
+        print(response.request.headers)
         yield item
 
-
-    def parse_tag(self, response):
-        pass
-
-    def parse_list(self, response):
-        lst = response.css("li.subject-item").extract()
-        settings.TAG_FLAG = 0
-        for i in lst:
-            selector = Selector(text=i)
-            url = selector.css("div.info>h2>a::attr(href)").extract_first()
-            # print(url)
-            if url is None:
-                continue
-            sub = url.split('/')[-2]
-            self.cur_lst.append(sub)
-            time.sleep(np.random.rand()*2)
-            yield scrapy.Request(url=url, callback=self.parse_detail, dont_filter=True)
-
-        next = response.css("span.next>a::attr(href)").extract_first()
-        if next is not None:
-            yield scrapy.Request(url=response.urljoin(next), callback=self.parse_list)
-        elif next is None or len(lst)==0:
-            # todo
-            settings.TAG_FLAG = 1
-            yield {
-                settings.CURRENT_TAG: self.cur_lst
-            }
-
     def start_requests(self):
-        url = 'https://book.douban.com/subject/30372880/'
-        url2 = 'https://book.douban.com/subject/30487959/'
-        url3 = 'https://book.douban.com/subject/14939650/'
-        url4 = 'https://book.douban.com/subject/25862578/'
-        url5 = 'https://book.douban.com/subject/1084336/'
-        url6 = 'https://book.douban.com/subject/30325327/'
-        url7 = 'https://book.douban.com/subject/1000009/'
-        url_list = 'https://book.douban.com/tag/%E5%B0%8F%E8%AF%B4?start=0&type=T'
 
-
-        # for i in settings.TAGS:
-        #     settings.CURRENT_TAG = i
-        #     yield scrapy.Request(url='https://book.douban.com/tag/'+i, callback=self.parse_list)
-
-
-        # yield scrapy.Request(url=url_list, callback=self.parse_list)
-        # yield scrapy.Request(url=url7, callback=self.parse_detail, dont_filter=True)
-        for i in range(1003061,1050001):
+        for i in range(settings.START_NUM,settings.END_NUM):
             yield scrapy.Request(url='https://book.douban.com/subject/'+str(i)+'/', callback=self.parse_detail)
-            time.sleep(np.random.rand() * 5)
+            # time.sleep(np.random.rand() * 5)
 
 
 
@@ -228,9 +184,6 @@ class UASpider(scrapy.Spider):
     # allowed_domains = []
     start_urls = []
 
-
-
-
     def parse(self, response):
         if response.css("div.content-base>section>div").extract_first() is None:
             return
@@ -253,9 +206,6 @@ class UASpider(scrapy.Spider):
         if Selector(text=div).css('#pagination>span.current::text').extract_first() == '10':
             return
         yield scrapy.Request(url=response.urljoin(url), callback=self.parse)
-
-
-
 
     def start_requests(self):
         url = "https://developers.whatismybrowser.com/useragents/explore/software_name/outlook/"

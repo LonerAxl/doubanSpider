@@ -61,7 +61,7 @@ class DoubanspiderJSONPipeline(object):
         return pipeline
 
     def spider_opened(self, spider):
-        filename = 'outputs/' + settings.CURRENT_TAG + '.json'
+        filename = 'outputs/' + str(settings.START_NUM) + '-' + str(settings.END_NUM) + '.json'
         # filename = 'outputs/' + 'ua' + '.json'
         self.file = open(filename, 'a+b')
         self.exporter = JsonLinesItemExporter(self.file, encoding="utf-8", ensure_ascii=False )
@@ -72,9 +72,6 @@ class DoubanspiderJSONPipeline(object):
         self.file.close()
 
     def process_item(self, item, spider):
-        if settings.TAG_FLAG == 1:
-            self.spider_closed(spider)
-            self.spider_opened(spider)
         self.exporter.export_item(item)
 
         return item
