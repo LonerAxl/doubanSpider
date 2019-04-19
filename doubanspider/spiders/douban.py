@@ -81,7 +81,7 @@ class DoubanSpider(scrapy.Spider):
             elif attr[i] == '原作名:':
                 item['originalTitle'] = value[i].strip()
         item['image'] = infose.css("a.nbg::attr(href)").extract_first().strip()
-        item['title'] = infose.css("a.nbg::attr(title)").extract_first().strip()
+        item['title'] = response.css("#wrapper>h1>span::text").extract_first().strip()
 
         sp_val = infose.css("span + a::text").extract()
         sp = infose.xpath("//a/preceding-sibling::span[1]/text()").extract()
