@@ -17,8 +17,12 @@ class DoubanSpider(scrapy.Spider):
 
     cur_lst = []
 
+    handle_httpstatus_list = [301]
     def parse_detail(self, response):
 
+        if response.status == 301:
+            print('ignore 301')
+            return
         if response.css("#db-nav-book").extract_first() is None or response.css('div.subjectwrap.clearfix').extract_first() is None:
             return
 
@@ -61,7 +65,9 @@ class DoubanSpider(scrapy.Spider):
             value.remove('/')
         except ValueError:
             pass
-        print(value)
+
+        if len(attr) > len(value):
+            attr.remove(attr[0])
 
         for i in range(len(attr)):
             if attr[i] == '出版社:':
@@ -140,11 +146,9 @@ class DoubanSpider(scrapy.Spider):
             summary = re.sub(">\s*<", "><", response.css('div.intro').extract_first())
             summaryse = Selector(text=summary)
             item['summary'] = ''.join(summaryse.css("p::text").extract()).strip()
-        print(response.request.headers)
         yield item
 
     def start_requests(self):
-
         for i in range(settings.START_NUM,settings.END_NUM):
             yield scrapy.Request(url='https://book.douban.com/subject/'+str(i)+'/', callback=self.parse_detail)
             # time.sleep(np.random.rand() * 5)

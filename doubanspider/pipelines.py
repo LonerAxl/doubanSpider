@@ -61,7 +61,7 @@ class DoubanspiderJSONPipeline(object):
         return pipeline
 
     def spider_opened(self, spider):
-        filename = 'outputs/' + str(settings.START_NUM) + '-' + str(settings.END_NUM) + '.json'
+        filename = 'outputs/part' + str(settings.FILE_NAME_PART) + '.json'
         # filename = 'outputs/' + 'ua' + '.json'
         self.file = open(filename, 'a+b')
         self.exporter = JsonLinesItemExporter(self.file, encoding="utf-8", ensure_ascii=False )

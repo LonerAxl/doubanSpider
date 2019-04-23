@@ -23,8 +23,10 @@ NEWSPIDER_MODULE = 'doubanspider.spiders'
 
 global START_NUM
 global END_NUM
+global FILE_NAME_PART
 START_NUM = 1012001
 END_NUM = 1100000
+FILE_NAME_PART = 2
 global USER_AGENT_LIST_L
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 USER_AGENT_LIST_L = ['Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)',
@@ -207,7 +209,7 @@ RANDOM_UA_PER_PROXY = True
 # Retry many times since proxies often fail
 RETRY_TIMES = 15
 # Retry on most error codes since proxies fail for different reasons
-RETRY_HTTP_CODES = [500, 503, 504, 400, 403, 404, 408, 301, 302]
+RETRY_HTTP_CODES = [500, 503, 504, 400, 403, 404, 408, 302]
 
 REDIRECT_ENABLED = False
 # Proxy list containing entries like
