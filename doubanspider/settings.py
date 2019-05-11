@@ -24,9 +24,10 @@ NEWSPIDER_MODULE = 'doubanspider.spiders'
 global START_NUM
 global END_NUM
 global FILE_NAME_PART
-START_NUM = 1012001
-END_NUM = 1100000
-FILE_NAME_PART = 2
+FILE_NAME_PART = 16
+START_NUM = 3800001+(FILE_NAME_PART-16)*150000
+END_NUM = START_NUM+150000
+
 global USER_AGENT_LIST_L
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 USER_AGENT_LIST_L = ['Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)',
